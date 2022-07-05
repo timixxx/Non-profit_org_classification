@@ -1,10 +1,10 @@
 import pandas as pd
+import nltk
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import ConfusionMatrixDisplay, classification_report
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.svm import LinearSVC
-import nltk
 from sklearn.linear_model import LogisticRegression
 from sklearn import neighbors
 from sklearn.naive_bayes import GaussianNB
@@ -21,8 +21,8 @@ columns = ['fullname', 'label']
 df = df[columns]  # leave only needed columns
 
 # Checking for classes imbalance
-fig = plt.figure(figsize=(7, 5))
 df.groupby('label').fullname.count().plot.bar()
+plt.title('Class spread')
 plt.show()
 
 
@@ -31,7 +31,7 @@ y = df.label
 
 # Vectoring
 stopwords_rus = nltk.corpus.stopwords.words('russian')
-vectorizer = TfidfVectorizer(stop_words=stopwords_rus)
+vectorizer = TfidfVectorizer(sublinear_tf=True, stop_words=stopwords_rus, min_df=2, ngram_range=(1, 2))
 
 train_corpus, test_corpus, y_train, y_test = train_test_split(X, y, test_size=0.2, stratify=y)
 
@@ -42,10 +42,10 @@ X_test = vectorizer.transform(test_corpus)
 model_NB = MultinomialNB()
 model_NB.fit(X_train, y_train)
 
-model_SVC = LinearSVC(multi_class='ovr')
+model_SVC = LinearSVC()
 model_SVC.fit(X_train, y_train)
 
-logit = LogisticRegression(class_weight='balanced', multi_class='ovr')
+logit = LogisticRegression(random_state=0, max_iter=120)
 logit.fit(X_train, y_train)
 
 knn = neighbors.KNeighborsClassifier(n_neighbors=5)
@@ -64,9 +64,16 @@ def accuracy_test(model, display):
         y_pred = model.predict(X_test.toarray())
     else:
         y_pred = model.predict(X_test)
+
     print(classification_report(y_test, y_pred, zero_division=0))
+
     if display:
-        ConfusionMatrixDisplay.from_estimator(model, X_test, y_test, cmap='hot')
+        if model == gnb:
+            ConfusionMatrixDisplay.from_estimator(model, X_test.toarray(), y_test, cmap='hot')
+        else:
+            ConfusionMatrixDisplay.from_estimator(model, X_test, y_test, cmap='hot')
+
+        plt.title(model)
         plt.show()
 
 
@@ -85,3 +92,7 @@ for model in models:
 
 # Visualization of the best model
 accuracy_test(logit, True)
+
+# Testing with manual input
+print(input_test(logit))
+
