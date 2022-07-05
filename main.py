@@ -20,6 +20,12 @@ columns = ['fullname', 'label']
 
 df = df[columns]  # leave only needed columns
 
+# Checking for classes imbalance
+fig = plt.figure(figsize=(7, 5))
+df.groupby('label').fullname.count().plot.bar()
+plt.show()
+
+
 X = df.fullname
 y = df.label
 
@@ -51,8 +57,7 @@ gnb.fit(X_train.toarray(), y_train)
 clf = tree.DecisionTreeClassifier()
 clf = clf.fit(X_train, y_train)
 
-
-# Checking an accuracy of models
+# Checking the accuracy of models
 def accuracy_test(model, display):
     print("Accuracy of model", model, ":")
     if model == gnb:
@@ -60,7 +65,7 @@ def accuracy_test(model, display):
     else:
         y_pred = model.predict(X_test)
     print(classification_report(y_test, y_pred, zero_division=0))
-    if display == 1:
+    if display:
         ConfusionMatrixDisplay.from_estimator(model, X_test, y_test, cmap='hot')
         plt.show()
 
@@ -76,7 +81,7 @@ def input_test(model):
 models = [model_NB, model_SVC, logit, knn, gnb, clf]
 
 for model in models:
-    accuracy_test(model, 0)
+    accuracy_test(model, False)
 
 # Visualization of the best model
-accuracy_test(logit, 1)
+accuracy_test(logit, True)
