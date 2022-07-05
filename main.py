@@ -1,7 +1,7 @@
 import pandas as pd
 import nltk
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import ConfusionMatrixDisplay, classification_report
+from sklearn.metrics import ConfusionMatrixDisplay, roc_auc_score
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.svm import LinearSVC
@@ -10,6 +10,7 @@ from sklearn import neighbors
 from sklearn.naive_bayes import GaussianNB
 from sklearn import tree
 import matplotlib.pyplot as plt
+
 
 # Loading data
 df = pd.read_csv("Data/Train_dataset.csv")
@@ -22,7 +23,9 @@ df = df[columns]  # leave only needed columns
 
 # Checking for classes imbalance
 df.groupby('label').fullname.count().plot.bar()
-plt.title('Class spread')
+ax = plt.subplot()
+ax.set_ylabel('Number of names')
+ax.set_title('Data class spread')
 plt.show()
 
 
@@ -57,15 +60,18 @@ gnb.fit(X_train.toarray(), y_train)
 clf = tree.DecisionTreeClassifier()
 clf = clf.fit(X_train, y_train)
 
+
 # Checking the accuracy of models
 def accuracy_test(model, display):
     print("Accuracy of model", model, ":")
     if model == gnb:
-        y_pred = model.predict(X_test.toarray())
+        y_pred = model.predict_proba(X_test.toarray())
+    elif model == model_SVC:
+        y_pred = model._predict_proba_lr(X_test)
     else:
-        y_pred = model.predict(X_test)
+        y_pred = model.predict_proba(X_test)
 
-    print(classification_report(y_test, y_pred, zero_division=0))
+    print(roc_auc_score(y_test, y_pred, multi_class='ovo'))
 
     if display:
         if model == gnb:
@@ -87,8 +93,37 @@ def input_test(model):
 
 models = [model_NB, model_SVC, logit, knn, gnb, clf]
 
+
+def accuracy_compare(models):
+    roc_scores = []
+    names = []
+    for model in models:
+        model_name = model.__class__.__name__
+        names.append(model_name)
+
+        if model == gnb:
+            y_pred = model.predict_proba(X_test.toarray())
+        elif model == model_SVC:
+            y_pred = model._predict_proba_lr(X_test)
+        else:
+            y_pred = model.predict_proba(X_test)
+
+        roc = roc_auc_score(y_test, y_pred, multi_class='ovo')
+        roc_scores.append(roc)
+
+
+    ax = plt.subplot()
+    rect = ax.bar(names, roc_scores, width=0.35)
+    ax.set_ylabel('ROC AUC Score')
+    ax.set_title('Accuracy of models')
+    ax.bar_label(rect, padding=3)
+    plt.show()
+
+
 for model in models:
     accuracy_test(model, False)
+
+accuracy_compare(models)
 
 # Visualization of the best model
 accuracy_test(logit, True)
